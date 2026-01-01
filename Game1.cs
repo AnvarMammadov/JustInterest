@@ -4,8 +4,12 @@ using Microsoft.Xna.Framework.Input;
 using JustInterest.Core;
 using JustInterest.Player;
 using JustInterest.Locations;
+using JustInterest.UI;
+using JustInterest.Interactions;
+using JustInterest.Items;
 using System.Collections.Generic;
 using System;
+using System.Linq;
 
 namespace JustInterest
 {
@@ -18,6 +22,7 @@ namespace JustInterest
         // Core Managers
         private GameStateManager _stateManager;
         private TimeManager _timeManager;
+        private UIManager _uiManager;
 
         // Player
         private Player.Player _player;
@@ -26,6 +31,9 @@ namespace JustInterest
         // Locations
         private Dictionary<string, Location> _locations;
         private Location _currentLocation;
+
+        // Interactable Objects
+        private List<InteractableObject> _interactables;
 
         // Placeholder textures
         private Texture2D _playerTexture;
@@ -49,30 +57,49 @@ namespace JustInterest
 
         protected override void Initialize()
         {
-            // Initialize managers
+            // Initialize managers FIRST
             _stateManager = new GameStateManager();
-            _timeManager = new TimeManager(startHour: 8, startDay: 1);
-
-            // Initialize player controller
+            _timeManager = new TimeManager();
             _playerController = new PlayerController();
-
-            // Initialize player
-            _player = new Player.Player(new Vector2(400, 300));
 
             // Initialize locations
             InitializeLocations();
 
-            // Set initial location
-            _currentLocation = _locations["PlayerRoom"];
-            _player.CurrentLocationId = "PlayerRoom";
+            // Initialize player with proper spawn position
+            if (_locations.ContainsKey("PlayerRoom"))
+            {
+                Vector2 startPos = _locations["PlayerRoom"].DefaultSpawnPosition;
+                _player = new Player.Player(startPos);
+                _currentLocation = _locations["PlayerRoom"];
+            }
+            else
+            {
+                // Fallback
+                _player = new Player.Player(new Vector2(960, 1070));
+                _currentLocation = _locations.Values.First();
+            }
 
-            // Subscribe to events
-            _timeManager.OnDayChanged += OnDayChanged;
-            _player.Stats.OnDeath += OnPlayerDeath;
+            // Initialize UI Manager (AFTER player)
+            _uiManager = new UIManager(_player);
 
-            // Start in playing state (skip main menu for now)
+            // Initialize interactable objects
+            _interactables = new List<InteractableObject>();
+            
+            // Soyuducu - PlayerRoom-da
+            var fridge = new Fridge(
+                new Vector2(1500, 850),
+                new Rectangle(1450, 800, 120, 150)
+            );
+            _interactables.Add(fridge);
+
+            // Event subscriptions (AFTER everything is created)
+            _player.Stats.OnDeath += () => _stateManager.ChangeState(GameState.GameOver);
+            _timeManager.OnDayChanged += (day) => _player.Stats.OnNewDay(day);
+
+            // Start in Playing state
             _stateManager.ChangeState(GameState.Playing);
 
+            // Call base LAST
             base.Initialize();
         }
 
@@ -179,6 +206,17 @@ namespace JustInterest
                     location.SetBackground(_backgroundTexture);
                 }
             }
+
+            // Load font
+            try
+            {
+                _font = Content.Load<SpriteFont>("Fonts/Arial");
+            }
+            catch
+            {
+                // Font yüklənmədi - DrawText işləməyəcək
+                System.Diagnostics.Debug.WriteLine("Font yüklənmədi");
+            }
         }
 
         protected override void Update(GameTime gameTime)
@@ -221,31 +259,66 @@ namespace JustInterest
             // Update time
             _timeManager.Update(gameTime);
 
+            // Əgər UI açıqdırsa, UI-ı update et
+            if (_uiManager.IsUIActive)
+            {
+                _uiManager.Update(gameTime, _playerController.GetCurrentKeyState(), _playerController.GetPreviousKeyState());
+                return; // Player hərəkət etmir UI açıq olanda
+            }
+
+            // Inventory açmaq
+            if (_playerController.IsInventoryPressed())
+            {
+                _uiManager.OpenInventoryUI();
+                return;
+            }
+
             // Get input (now includes X and Y)
             Vector2 movement = _playerController.GetMovementInput();
-            // float depth = _playerController.GetDepthInput(); // Removed
 
             // Update player
             _player.Update(gameTime, movement, _currentLocation.MovementBounds);
 
-            // Check for location transitions
+            // Check for interactable objects
+            InteractableObject nearbyObject = null;
+            foreach (var obj in _interactables)
+            {
+                if (obj.IsPlayerNearby(_player.GetBounds()))
+                {
+                    nearbyObject = obj;
+                    break;
+                }
+            }
+
+            // Interaction
+            if (nearbyObject != null && _playerController.IsInteractPressed())
+            {
+                if (nearbyObject is Fridge fridge)
+                {
+                    _uiManager.OpenFridgeUI(fridge);
+                }
+            }
+
+            //Check for location transitions
             if (_playerController.IsInteractPressed())
             {
-                var transition = _currentLocation.GetActiveTransition(_player.GetBounds());
-                if (transition != null && _locations.ContainsKey(transition.TargetLocationId))
+                foreach (var trigger in _currentLocation.Transitions)
                 {
-                    ChangeLocation(transition.TargetLocationId, transition.TargetSpawnPosition);
+                    if (trigger.Area.Intersects(_player.GetBounds()))
+                    {
+                        // Change location
+                        ChangeLocation(trigger.TargetLocationId, trigger.TargetSpawnPosition);
+                        break;
+                    }
                 }
             }
         }
 
         private void ChangeLocation(string locationId, Vector2 spawnPosition)
         {
-            _currentLocation.Exit();
             _currentLocation = _locations[locationId];
             _player.CurrentLocationId = locationId;
             _player.SetPosition(spawnPosition);
-            _currentLocation.Enter();
         }
 
         protected override void Draw(GameTime gameTime)
@@ -281,11 +354,42 @@ namespace JustInterest
             // Draw player
             _player.Draw(_spriteBatch);
 
-            // Draw UI
+            // Draw UI (stats)
             DrawUI();
 
             // Draw transition triggers (debug)
             DrawTransitionTriggers();
+
+            // Draw interactable labels
+            DrawInteractableLabels();
+
+            // Draw UI overlay (if active)
+            if (_uiManager.IsUIActive)
+            {
+                _uiManager.Draw(_spriteBatch, _font, _whitePixel, SCREEN_WIDTH, SCREEN_HEIGHT);
+            }
+        }
+
+        private void DrawInteractableLabels()
+        {
+            foreach (var obj in _interactables)
+            {
+                if (obj.IsPlayerNearby(_player.GetBounds()))
+                {
+                    // Draw label above object
+                    int labelX = obj.Bounds.X + obj.Bounds.Width / 2 - 50;
+                    int labelY = obj.Bounds.Y - 30;
+                    
+                    if (_font != null)
+                    {
+                        string label = $"{obj.Label} - [E]";
+                        _spriteBatch.DrawString(_font, label, new Vector2(labelX, labelY), Color.Yellow);
+                    }
+
+                    // Debug bounds
+                    obj.DrawDebug(_spriteBatch, _whitePixel);
+                }
+            }
         }
 
         private void DrawUI()
@@ -397,23 +501,26 @@ namespace JustInterest
 
         private void DrawText(string text, int x, int y, Color color)
         {
-            // Placeholder - font yükləndikdə işləyəcək
-            // if (_font != null)
-            //     _spriteBatch.DrawString(_font, text, new Vector2(x, y), color);
-            
-            // For now, just draw a small rectangle as placeholder for each character
-            int charWidth = 8;
-            for (int i = 0; i < text.Length; i++)
+            if (_font != null)
             {
-                _spriteBatch.Draw(_whitePixel, 
-                    new Rectangle(x + i * charWidth, y, charWidth - 2, 12), 
-                    color * 0.3f);
+                _spriteBatch.DrawString(_font, text, new Vector2(x, y), color);
+            }
+            else
+            {
+                // Fallback - kiçik placeholder
+                int charWidth = 8;
+                for (int i = 0; i < text.Length; i++)
+                {
+                    _spriteBatch.Draw(_whitePixel, 
+                        new Rectangle(x + i * charWidth, y, charWidth - 2, 12), 
+                        color * 0.3f);
+                }
             }
         }
 
         private void OnDayChanged(int newDay)
         {
-            _player.Stats.OnNewDay();
+            _player.Stats.OnNewDay(newDay);
         }
 
         private void OnPlayerDeath()

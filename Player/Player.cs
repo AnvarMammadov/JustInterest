@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using JustInterest.Items;
 
 namespace JustInterest.Player
 {
@@ -42,6 +43,9 @@ namespace JustInterest.Player
         // Stats referansı
         public PlayerStats Stats { get; private set; }
 
+        // Inventory
+        public Inventory Inventory { get; private set; }
+
         // Cari location ID
         public string CurrentLocationId { get; set; }
 
@@ -50,6 +54,7 @@ namespace JustInterest.Player
             Position = startPosition;
             Scale = MAX_SCALE; // MAX scale ilə başla (ən aşağıda)
             Stats = new PlayerStats(startingMoney: 50);
+            Inventory = new Inventory(); // Inventory yaradılır
             CurrentLocationId = "PlayerRoom";
             _directionTextures = new Dictionary<Direction, Texture2D>();
         }
@@ -72,6 +77,11 @@ namespace JustInterest.Player
             {
                 _bounds = new Rectangle(0, 0, _currentTexture.Width, _currentTexture.Height);
             }
+        }
+
+        public void SetPosition(Vector2 position)
+        {
+            Position = position;
         }
 
         public void Update(GameTime gameTime, Vector2 movement, Rectangle movementBounds)
@@ -161,12 +171,6 @@ namespace JustInterest.Player
                 width,
                 height
             );
-        }
-
-        // Position setter (location dəyişəndə)
-        public void SetPosition(Vector2 position)
-        {
-            Position = position;
         }
 
         public void SetScale(float scale)

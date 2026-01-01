@@ -143,10 +143,12 @@ namespace JustInterest.Player
             return false;
         }
 
-        // Gün keçəndə çağırılacaq
-        public void OnNewDay()
+        /// <summary>
+        /// Gündəlik event - kira borcu əlavə et
+        /// </summary>
+        public void OnNewDay(int day)
         {
-            RentDebt += DailyRent;
+            RentDebt += DailyRent; // Assuming DailyRent is the correct variable to use here. The instruction used DAILY_RENT which is not defined.
         }
 
         // Stat check-ləri

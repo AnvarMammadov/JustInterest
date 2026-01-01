@@ -22,6 +22,9 @@ namespace JustInterest.Player
             _currentKeyState = Keyboard.GetState();
         }
 
+        public KeyboardState GetCurrentKeyState() => _currentKeyState;
+        public KeyboardState GetPreviousKeyState() => _previousKeyState;
+
         /// <summary>
         /// WASD movement vector-unu qaytarır (X və Y)
         /// </summary>
@@ -49,6 +52,14 @@ namespace JustInterest.Player
         }
 
 
+
+        /// <summary>
+        /// Inventory key - I basanda qaytarır
+        /// </summary>
+        public bool IsInventoryPressed()
+        {
+            return _currentKeyState.IsKeyDown(Keys.I) && _previousKeyState.IsKeyUp(Keys.I);
+        }
 
         /// <summary>
         /// Key press check (bir dəfə basıldı?)
