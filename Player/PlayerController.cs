@@ -23,16 +23,23 @@ namespace JustInterest.Player
         }
 
         /// <summary>
-        /// WASD movement vector-unu qaytarır
+        /// WASD movement vector-unu qaytarır (X və Y)
         /// </summary>
         public Vector2 GetMovementInput()
         {
             Vector2 movement = Vector2.Zero;
 
+            // Horizontal
             if (_currentKeyState.IsKeyDown(Keys.A))
                 movement.X -= 1;
             if (_currentKeyState.IsKeyDown(Keys.D))
                 movement.X += 1;
+
+            // Vertical (Dərinlik)
+            if (_currentKeyState.IsKeyDown(Keys.W))
+                movement.Y -= 1; // Yuxarı (uzağa)
+            if (_currentKeyState.IsKeyDown(Keys.S))
+                movement.Y += 1; // Aşağı (yaxına)
 
             // Normalize et ki diagonal hərəkət sürətli olmasın
             if (movement.Length() > 0)
@@ -41,20 +48,7 @@ namespace JustInterest.Player
             return movement;
         }
 
-        /// <summary>
-        /// W/S depth movement-i qaytarır
-        /// </summary>
-        public float GetDepthInput()
-        {
-            float depth = 0f;
 
-            if (_currentKeyState.IsKeyDown(Keys.S))
-                depth += 1; // İrəli = böyüdülür (scale artır)
-            if (_currentKeyState.IsKeyDown(Keys.W))
-                depth -= 1; // Geriyə = kiçildilir (scale azalır)
-
-            return depth;
-        }
 
         /// <summary>
         /// Key press check (bir dəfə basıldı?)

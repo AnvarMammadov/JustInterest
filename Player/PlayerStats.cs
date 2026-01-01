@@ -48,10 +48,10 @@ namespace JustInterest.Player
         {
             float deltaSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Stat-ları azalt
-            DecreaseHunger(HUNGER_DECAY_RATE * deltaSeconds);
-            DecreaseThirst(THIRST_DECAY_RATE * deltaSeconds);
-            DecreaseHygiene(HYGIENE_DECAY_RATE * deltaSeconds);
+            // TEST MODE: Stat azalmasını söndür
+            // DecreaseHunger(HUNGER_DECAY_RATE * deltaSeconds);
+            // DecreaseThirst(THIRST_DECAY_RATE * deltaSeconds);
+            // DecreaseHygiene(HYGIENE_DECAY_RATE * deltaSeconds);
 
             // Critical check-lər
             CheckCriticalStates();

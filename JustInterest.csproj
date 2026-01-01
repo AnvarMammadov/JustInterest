@@ -12,6 +12,10 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Content\Backgrounds\bedroom.png" />
+    <None Remove="Content\Characters\back_view.png" />
+    <None Remove="Content\Characters\front_view.png" />
+    <None Remove="Content\Characters\left_view.png" />
+    <None Remove="Content\Characters\right_view.png" />
     <None Remove="Icon.ico" />
     <None Remove="Icon.bmp" />
   </ItemGroup>
@@ -31,7 +35,16 @@
     <Resource Include="Content\Backgrounds\bedroom.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="Content\Characters\character.png">
+    <Resource Include="Content\Characters\back_view.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Content\Characters\front_view.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Content\Characters\left_view.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Content\Characters\right_view.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>

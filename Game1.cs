@@ -81,31 +81,31 @@ namespace JustInterest
             _locations = new Dictionary<string, Location>();
 
             // Player's Room - otaq (1920x1080)
+            // Ekranın aşağı 1/4-ü: Y 810-1070 (260px)
             var playerRoom = new Location("PlayerRoom", "Otağın");
-            // Position indi top-left olduğu üçün Y-i ayarlayırıq
-            playerRoom.DefaultSpawnPosition = new Vector2(860, 750); // Yerdə başlayır
-            playerRoom.SetMovementBounds(new Rectangle(300, 650, 1320, 250));
+            playerRoom.DefaultSpawnPosition = new Vector2(960, 1070); // Mərkəz, ən aşağıda (ayaqlar 10px üstdə)
+            playerRoom.SetMovementBounds(new Rectangle(300, 810, 1320, 260)); // Y: 810-1070
             _locations.Add("PlayerRoom", playerRoom);
 
             // Street - küçə (1920x1080)
             var street = new Location("Street", "Küçə");
-            street.DefaultSpawnPosition = new Vector2(860, 750);
-            street.SetMovementBounds(new Rectangle(250, 650, 1420, 250));
+            street.DefaultSpawnPosition = new Vector2(960, 1070);
+            street.SetMovementBounds(new Rectangle(250, 810, 1420, 260)); // Y: 810-1070
             
-            // Transition back to room (street-də sol tərəfdə, aşağıda)
+            // Transition back to room (sol tərəfdə, aşağı zonada)
             street.AddTransition(new TransitionTrigger(
-                new Rectangle(150, 700, 150, 220),
+                new Rectangle(150, 900, 150, 160), // Y: 900-1060
                 "PlayerRoom",
-                new Vector2(1350, 750),
+                new Vector2(1450, 1070),
                 "Evə gir"
             ));
             _locations.Add("Street", street);
 
-            // Add transition from room to street (otaqda sağ tərəfdə, aşağıda)
+            // Add transition from room to street (sağ tərəfdə, aşağı zonada)
             playerRoom.AddTransition(new TransitionTrigger(
-                new Rectangle(1620, 700, 150, 220),
+                new Rectangle(1620, 900, 150, 160), // Y: 900-1060
                 "Street",
-                new Vector2(380, 750),
+                new Vector2(420, 1070),
                 "Çölə çıx"
             ));
         }
@@ -121,22 +121,37 @@ namespace JustInterest
             // Load actual assets
             try
             {
-                // Load player character sprite
-                _playerTexture = Content.Load<Texture2D>("Characters/character");
-                _player.SetTexture(_playerTexture);
+                // Try loading directional character sprites
+                try
+                {
+                    var directionTextures = new Dictionary<JustInterest.Player.Direction, Texture2D>();
+                    directionTextures[JustInterest.Player.Direction.Front] = Content.Load<Texture2D>("Characters/front_view");
+                    directionTextures[JustInterest.Player.Direction.Back] = Content.Load<Texture2D>("Characters/back_view");
+                    directionTextures[JustInterest.Player.Direction.Left] = Content.Load<Texture2D>("Characters/left_view");
+                    directionTextures[JustInterest.Player.Direction.Right] = Content.Load<Texture2D>("Characters/right_view");
+                    
+                    _player.SetDirectionTextures(directionTextures);
+                }
+                catch
+                {
+                    // Fallback: create placeholder
+                    _playerTexture = new Texture2D(GraphicsDevice, 64, 96);
+                    Color[] playerData = new Color[64 * 96];
+                    for (int i = 0; i < playerData.Length; i++)
+                        playerData[i] = new Color(255, 150, 200);
+                    _playerTexture.SetData(playerData);
+                    _player.SetTexture(_playerTexture);
+                }
 
                 // Load bedroom background
                 var bedroomTexture = Content.Load<Texture2D>("Backgrounds/bedroom");
-                
-                // Set background for PlayerRoom
                 _locations["PlayerRoom"].SetBackground(bedroomTexture);
                 
-                // For Street, use placeholder (we can add later)
-                // Create a different colored placeholder for street
+                // For Street, use placeholder
                 _backgroundTexture = new Texture2D(GraphicsDevice, SCREEN_WIDTH, SCREEN_HEIGHT);
                 Color[] streetBgData = new Color[SCREEN_WIDTH * SCREEN_HEIGHT];
                 for (int i = 0; i < streetBgData.Length; i++)
-                    streetBgData[i] = new Color(150, 180, 200); // Açıq mavi (səma)
+                    streetBgData[i] = new Color(150, 180, 200);
                 _backgroundTexture.SetData(streetBgData);
                 _locations["Street"].SetBackground(_backgroundTexture);
             }
@@ -206,12 +221,12 @@ namespace JustInterest
             // Update time
             _timeManager.Update(gameTime);
 
-            // Get input
+            // Get input (now includes X and Y)
             Vector2 movement = _playerController.GetMovementInput();
-            float depth = _playerController.GetDepthInput();
+            // float depth = _playerController.GetDepthInput(); // Removed
 
             // Update player
-            _player.Update(gameTime, movement, depth, _currentLocation.MovementBounds);
+            _player.Update(gameTime, movement, _currentLocation.MovementBounds);
 
             // Check for location transitions
             if (_playerController.IsInteractPressed())
