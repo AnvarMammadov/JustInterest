@@ -49,7 +49,7 @@ float GetEdge(float2 texCoord)
 float GetScreenTone(float2 texCoord, float lum)
 {
     // Only mid-tones get screen tone
-    float inRange = (lum >= 0.3 && lum <= 0.7) ? 1.0 : 0.0;
+    float inRange = (lum >= 0.1 && lum <= 0.9) ? 1.0 : 0.0;
     
     float2 dotPos = frac(texCoord * TextureSize / HalftoneSize);
     float dist = length(dotPos - 0.5);

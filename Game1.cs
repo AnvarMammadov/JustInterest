@@ -150,6 +150,8 @@ namespace JustInterest
             _whitePixel = new Texture2D(GraphicsDevice, 1, 1);
             _whitePixel.SetData(new[] { Color.White });
 
+
+
             // Load actual assets
             try
             {

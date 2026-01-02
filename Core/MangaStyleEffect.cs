@@ -12,10 +12,10 @@ namespace JustInterest.Core
         private Effect _effect;
         
         // Shader parameters - classic manga style defaults
-        private float _edgeThreshold = 0.12f;
-        private float _edgeThickness = 1.0f;
-        private float _halftoneSize = 8.0f;
-        private float _halftoneDensity = 0.6f;
+        private float _edgeThreshold = 0.05f;
+        private float _edgeThickness = 2.0f;
+        private float _halftoneSize = 14.0f;
+        private float _halftoneDensity = 0.7f;
         private int _posterizeLevels = 6;
         private bool _blackAndWhite = true; // Default: manga mode ON
 
