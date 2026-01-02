@@ -40,6 +40,11 @@ namespace JustInterest
         private Texture2D _backgroundTexture;
         private Texture2D _whitePixel;
 
+        // Manga shader
+        private MangaStyleEffect _mangaEffect;
+        private RenderTarget2D _renderTarget;
+        private bool _mangaEffectEnabled = false;
+
         // Screen dimensions - Full HD
         private const int SCREEN_WIDTH = 1920;
         private const int SCREEN_HEIGHT = 1080;
@@ -217,6 +222,29 @@ namespace JustInterest
                 // Font yüklənmədi - DrawText işləməyəcək
                 System.Diagnostics.Debug.WriteLine("Font yüklənmədi");
             }
+
+            // Load manga shader
+            try
+            {
+                var mangaShader = Content.Load<Effect>("Shaders/MangaStyle");
+                _mangaEffect = new MangaStyleEffect(mangaShader);
+                
+                // Create render target for post-processing
+                _renderTarget = new RenderTarget2D(
+                    GraphicsDevice,
+                    SCREEN_WIDTH,
+                    SCREEN_HEIGHT,
+                    false,
+                    SurfaceFormat.Color,
+                    DepthFormat.None
+                );
+                
+                System.Diagnostics.Debug.WriteLine("Manga shader yükləndi - F1 ilə aç/bağla");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Manga shader yüklənmədi: {ex.Message}");
+            }
         }
 
         protected override void Update(GameTime gameTime)
@@ -231,6 +259,13 @@ namespace JustInterest
                     _stateManager.ChangeState(GameState.Paused);
                 else if (_stateManager.IsPaused())
                     _stateManager.ReturnToPreviousState();
+            }
+
+            // Toggle manga shader (F1)
+            if (_playerController.IsKeyPressed(Keys.F1))
+            {
+                _mangaEffectEnabled = !_mangaEffectEnabled;
+                System.Diagnostics.Debug.WriteLine($"Manga effekt: {(_mangaEffectEnabled ? "Açıq" : "Bağlı")}");
             }
 
             // Update based on game state
@@ -323,25 +358,63 @@ namespace JustInterest
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Black);
-
-            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-
-            switch (_stateManager.CurrentState)
+            // If manga effect is enabled and available, render to render target first
+            if (_mangaEffectEnabled && _mangaEffect != null && _renderTarget != null)
             {
-                case GameState.Playing:
-                    DrawPlaying();
-                    break;
-                case GameState.Paused:
-                    DrawPlaying(); // Background
-                    DrawPauseOverlay();
-                    break;
-                case GameState.GameOver:
-                    DrawGameOver();
-                    break;
-            }
+                // Set render target
+                GraphicsDevice.SetRenderTarget(_renderTarget);
+                GraphicsDevice.Clear(Color.Black);
 
-            _spriteBatch.End();
+                // Draw scene normally
+                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+                switch (_stateManager.CurrentState)
+                {
+                    case GameState.Playing:
+                        DrawPlaying();
+                        break;
+                    case GameState.Paused:
+                        DrawPlaying();
+                        DrawPauseOverlay();
+                        break;
+                    case GameState.GameOver:
+                        DrawGameOver();
+                        break;
+                }
+                _spriteBatch.End();
+
+                // Reset render target to back buffer
+                GraphicsDevice.SetRenderTarget(null);
+                GraphicsDevice.Clear(Color.Black);
+
+                // Apply manga shader
+                _mangaEffect.SetTextureSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+                _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, _mangaEffect.Effect);
+                _spriteBatch.Draw(_renderTarget, Vector2.Zero, Color.White);
+                _spriteBatch.End();
+            }
+            else
+            {
+                // Normal rendering without shader
+                GraphicsDevice.Clear(Color.Black);
+
+                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+
+                switch (_stateManager.CurrentState)
+                {
+                    case GameState.Playing:
+                        DrawPlaying();
+                        break;
+                    case GameState.Paused:
+                        DrawPlaying(); // Background
+                        DrawPauseOverlay();
+                        break;
+                    case GameState.GameOver:
+                        DrawGameOver();
+                        break;
+                }
+
+                _spriteBatch.End();
+            }
 
             base.Draw(gameTime);
         }
